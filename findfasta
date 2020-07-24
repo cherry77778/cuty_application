@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+import sys
+from optparse import OptionParser
+
+def DNA_complement(sequence):
+    sequence = sequence.upper()
+    sequence = sequence.replace('A', 't')
+    sequence = sequence.replace('T', 'a')
+    sequence = sequence.replace('C', 'g')
+    sequence = sequence.replace('G', 'c')
+    return sequence.upper()
+def revcomp(sequence):
+    return DNA_complement(sequence)[::-1]
+
+def main():
+    usage = 'usage: findfasta [options] arg'
+    parser = OptionParser(usage)
+    parser.add_option("-f", "--fasta", dest="fasta", help="read data from FILENAME")
+    parser.add_option("-n", "--name", dest="name", help="read data from FILENAME")
+    parser.add_option("-o", "--outfile", dest="result",help="write result into FILENAME")
+    (options, args) = parser.parse_args()
+
+    if  len(args) != 3:
+        print(usage)
+        return
+
+    fasta_file = open(options.fasta, 'r')
+    find_file = open(options.name,'r')
+    result = open(options.result,'w')
+
+    seq = {}
+    for line in fasta_file:
+        if line.startswith('>'):
+            name = line.strip()[1:]
+            seq[name] = ''
+        else:
+            seq[name] += line.strip()
+    fasta_file.close()
+
+    for record in find_file:
+        col = record.strip().split()
+        if col[0] in seq.keys():
+            if len(col) == 3:
+                if int(col[1])<int(col[2]):
+                    result.write(">%s\n" % col[0])
+                    result.write(seq[col[0]][int(col[1]):int(col[2])]+"\n")
+                else:
+                    result.write(">%s\n" % col[0])
+                    result.write(revcomp(seq[col[0]][int(col[2]):int(col[1])]))
+                    result.write("\n")
+            if len(col) == 1:
+                result.write(">%s\n" % col[0])
+                result.write(seq[col[0]]+"\n")
+            if len(col) == 2:
+                result.write(">%s\n" % col[0])
+                result.write(seq[col[0]][int(col[1]):] + "\n")
+    result.close()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.stderr.write("User interrupt me! ;-) See you!\n")
+        sys.exit(0)
+
