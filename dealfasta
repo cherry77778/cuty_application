@@ -1,0 +1,154 @@
+#!/usr/bin/env python
+#名称，长度，GC含量，N率，ATCG各自频率
+#不输入想找的name id时，会返回所有信息
+import sys
+from Bio import SeqIO
+from optparse import OptionParser
+from matplotlib import pyplot as plt
+from pylab import savefig
+
+def GC(seq):
+    num_all = float(len(seq))
+    num_GC = 0
+    for base in seq:
+        if base in ['G','g','C','c']:
+            num_GC += 1
+        ratio_GC = num_GC/num_all
+    return ratio_GC
+def N(seq):
+    num_all = float(len(seq))
+    num_N = 0
+    for base in seq:
+        if base in ['N','n']:
+            num_N += 1
+        ratio_N = num_N/num_all
+    return  ratio_N
+def atcg(seq):
+    num_all = float(len(seq))
+    num_A = 0
+    num_T = 0
+    num_C = 0
+    num_G = 0
+    for base in seq:   #可以用count函数
+        if (base == 'A'):
+            num_A += 1
+        elif (base == 'C'):
+            num_C += 1
+        elif (base == 'G'):
+            num_G += 1
+        elif (base == 'T'):
+            num_T += 1
+        ratio_A = num_A/num_all
+        ratio_C = num_C/num_all
+        ratio_G = num_G/num_all
+        ratio_T = num_T/num_all
+    return ratio_A,ratio_T,ratio_C,ratio_G
+def N50(seq):#seq是一个字典
+    BaseSum, Length = 0,[]
+    ValueSum, N50 = 0,0
+    for record in seq:
+        BaseSum += len(seq[record])
+        Length.append(len(seq[record]))
+    N50_pos = BaseSum/2.0
+    Length.sort()
+    Length.reverse()
+    for value in Length:
+        ValueSum += value
+        if N50_pos <= ValueSum:
+            N50 = value
+            break
+    return N50
+def N90(seq):#seq是一个字典
+    BaseSum, Length = 0,[]
+    ValueSum, N90 = 0,0
+    for record in seq:
+        BaseSum += len(seq[record])
+        Length.append(len(seq[record]))
+    N90_pos = BaseSum*0.9
+    Length.sort()
+    Length.reverse()
+    for value in Length:
+        ValueSum += value
+        if N90_pos <= ValueSum:
+            N90 = value
+            break
+    return N90
+def draw(seq):
+    x = ["A", "T", "C", "G"]
+    y = seq[0:4]
+    plt.bar(x, y, color='g', align='center')
+    plt.title('base_ratio figure')
+    plt.ylabel('base_ratio')
+    plt.xlabel('DNA')
+    savefig("figure.png")
+
+
+def main():
+    usage = "usage: %prog [options] arg"
+    parser = OptionParser(usage=usage)
+    parser.add_option("-f", "--fasta", dest="fasta", help="read data from FILENAME")
+    parser.add_option("-n","--name",dest = "name",help = "the name of sequences in fasta file")
+    parser.add_option("--GC", '--ratio_GC', dest="GC", help="write result into FILENAME", action = 'store_true')
+    parser.add_option("--ATCG","--ratio_ATCG",dest = "ATCG",help = "the ratio of A/T/C/G",action = "store_true")
+    parser.add_option('-N',"--ratio_N",dest="N",help = "the ratio of N",action = "store_true")
+    parser.add_option('--max',dest="max",help= "the max length of sequence",action = "store_true")
+    parser.add_option('--min',dest = "min",help = "the min length of sequence",action = "store_true")
+    parser.add_option('--N50',dest = "N50",help = "the N50 of this genome",action ="store_true")
+    parser.add_option('--N90',dest = "N90",help = "the N90 of this genome",action = "store_true")
+    parser.add_option('-d','--draw',dest = "draw",help = "draw diagram for each ratio",action = "store_true")
+    (options, args) = parser.parse_args()
+
+    # print(options)
+
+    if  len(args) > 8:
+        print(usage)
+        exit(0)
+    dicSeq = {}
+    ff = SeqIO.parse(options.fasta, 'fasta')
+    for s in ff:
+        dicSeq[s.id] = s.seq#字典dicSeq的键s.id，值对应s.seq
+
+    if options.name:
+        if options.name in dicSeq.keys():
+            print(options.name,len(dicSeq[options.name]))
+            if options.GC:
+                print("the ration of GC is",GC(dicSeq[options.name]))
+            if options.ATCG:
+                print("the ration of A T C G is",atcg(dicSeq[options.name]))
+                if options.draw:
+                   draw(atcg(dicSeq[options.name]))
+            if options.N:
+                print(N("the ration of N is",dicSeq[options.name]))
+        else:
+            print("please check your input name")
+    else:
+        for k in dicSeq.keys():
+            if options.GC:
+                print(k,len(dicSeq[k]),"the ration of GC is",GC(dicSeq[k]))
+            elif options.ATCG :
+                print(k,len(dicSeq[k]),"the ration of A T C G is",atcg(dicSeq[k]))
+            elif options.N:
+                print(k,len(dicSeq[k]),"the ration of N is",N(dicSeq[k]))
+            else:
+                print(k,len(dicSeq[k]))
+
+
+    if options.max:
+        key_name = max(dicSeq, key=dicSeq.get)
+        print("the max length is",key_name,len(dicSeq[key_name]))
+    if options.min:
+        key_name = min(dicSeq,key=dicSeq.get)
+        print("the min length is",key_name,len(dicSeq[key_name]))
+    if options.N50:
+        print(N50(dicSeq))
+    if options.N90:
+        print(N90(dicSeq))
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.stderr.write("User interrupt me! ;-) See you!\n")
+        sys.exit(0)
+
